@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+  <meta charset="UTF-8">
+  <title>Home Feed</title>
+  <style>
+    
+    h2 {
+      margin-bottom: 20px;
+      font-size: 20px;
+    }
+
+    .post {
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .author {
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .text {
+      margin-bottom: 10px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 20px;
+      font-size: 14px;
+    }
+
+    .actions span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #0a2b4f;
+    }
+
+    .counter {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h2>Home Feed</h2>
+  <div id="postContainer"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+
+  <script>
+    // ✅ Config mkati mwa file
+    const CONFIG = {
+      firebase: {
+        apiKey: "AIzaSyBBZxCwywnv_ZVXYezOV8IKG6iKWK5sL10",
+        authDomain: "studio-ywlo1.firebaseapp.com",
+        projectId: "studio-ywlo1",
+        storageBucket: "studio-ywlo1.firebasestorage.app",
+        messagingSenderId: "791958850921",
+        appId: "1:791958850921:web:149be668e7f132e59f41f8"
+      },
+      imgbbAPI: "6cd76cd441b1c0779a48c166439c8ffe"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(CONFIG.firebase);
+    const rtdb = firebase.database();
+
+    // Listen for posts in RTDB
+    rtdb.ref("posts").on("value", snap => {
+      const feed = document.getElementById("post");
+      feed.innerHTML = ""; // clear old posts
+
+      snap.forEach(child => {
+        const post = child.val();
+        const div = document.createElement("div");
+        div.className = "post";
+
+        div.innerHTML = `
+          <div class="author">${post.uid}</div>
+          <div class="text">${post.text}</div>
+          <div class="actions">
+            <span>👍 <span class="counter">${post.likes || 0}</span></span>
+            <span>💬 <span class="counter">${post.comments || 0}</span></span>
+            <span>🔗 <span class="counter">${post.shares || 0}</span></span>
+          </div>
+        `;
+        feed.appendChild(div);
+      });
+    });
+  </script>
+</body>
+</html>

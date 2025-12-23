@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ny">
+<head>
+  <meta charset="utf-8">
+  <title>Profile</title>
+  <style>
+    body{font-family:sans-serif;background:#f4f6f9;margin:0;padding:0}
+    .profile-container{max-width:600px;margin:0 auto;padding:0}
+    .cover-photo{width:100%;height:180px;background:#ccc;position:relative;overflow:hidden;cursor:pointer}
+    .cover-photo img{width:100%;height:100%;object-fit:cover}
+    .back-btn{position:absolute;top:10px;left:0%;padding:8px 12px;background:#0a2b4f;color:#fff;border:none;border-radius:6px;cursor:pointer;z-index:2}
+    .profile-photo{width:120px;height:120px;border-radius:50%;border:4px solid #fff;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#eee;overflow:hidden;cursor:pointer;z-index:1}
+    .profile-photo img{width:100%;height:100%;object-fit:cover}
+    .profile-header{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;margin-top:10px}
+    .profile-name{font-size:22px;font-weight:bold;color:#0a2b4f}
+    .edit-btn{padding:8px 16px;background:#0a2b4f;color:#fff;border:none;border-radius:6px;cursor:pointer}
+    .post-area{text-align:center;margin-top:20px}
+    textarea{width:160px;height:40px;padding:8px;font-size:14px;border:1px solid #ccc;border-radius:6px;cursor:pointer;resize:none}
+    .posts{margin-top:20px;padding:0 20px}
+    .post{background:#fff;padding:12px;border-radius:6px;margin-bottom:10px;box-shadow:0 0 6px rgba(0,0,0,0.1)}
+  </style>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+</head>
+<body>
+<div class="profile-container">
+  <div class="cover-photo" id="coverPhoto">
+    <img id="coverImg" src="https://i.ibb.co/default-cover.jpg" alt="Cover">
+    <button class="back-btn" onclick="window.location.href='dashboad.html'">Back</button>
+    <div class="profile-photo" id="profilePhoto">
+      <img id="profileImg" src="https://i.ibb.co/default.jpg" alt="Profile">
+    </div>
+  </div>
+
+  <div class="profile-header">
+    <div class="profile-name" id="userName"></div>
+    <button class="edit-btn" onclick="window.location.href='edit.html'">Edit Profile</button>
+  </div>
+
+  <div class="post-area">
+    <textarea readonly onclick="window.location.href='post.html'" placeholder="Write a post..."></textarea>
+  </div>
+
+  <div id="postsContainer"></div>
+</div>
+
+<!-- Hidden file inputs -->
+<input type="file" id="coverInput" accept="image/*" style="display:none">
+<input type="file" id="profileInput" accept="image/*" style="display:none">
+
+
+<script type="module" src="posts.js"></script>
+<script type="module">
+// ✅ Config
+const CONFIG = {
+  firebase: {
+    apiKey: "AIzaSyBBZxCwywnv_ZVXYezOV8IKG6iKWK5sL10",
+    authDomain: "studio-ywlo1.firebaseapp.com",
+    projectId: "studio-ywlo1",
+    storageBucket: "studio-ywlo1.appspot.com",
+    messagingSenderId: "791958850921",
+    appId: "1:791958850921:web:149be668e7f132e59f41f8"
+  },
+  imgbbAPI: "6cd76cd441b1c0779a48c166439c8ffe"
+};
+
+// ✅ Firebase init
+firebase.initializeApp(CONFIG.firebase);
+const auth = firebase.auth();
+const firestore = firebase.firestore();
+const rtdb = firebase.database();
+
+// ✅ Upload to imgbb
+async function uploadToImgbb(file){
+  const formData = new FormData();
+  formData.append("image", file);
+  const res = await fetch(`https://api.imgbb.com/1/upload?key=${CONFIG.imgbbAPI}`, {
+    method: "POST",
+    body: formData
+  });
+  const data = await res.json();
+  return data.data.url;
+}
+
+// ✅ Load profile
+auth.onAuthStateChanged(async user=>{
+  if(user){
+    const uid = user.uid;
+    const doc = await firestore.collection("users").doc(uid).get();
+    if(doc.exists){
+      const data = doc.data();
+      document.getElementById("userName").textContent = data.fullName || "Anonymous";
+      document.getElementById("profileImg").src = data.profilePhoto || "https://i.ibb.co/default.jpg";
+      document.getElementById("coverImg").src = data.coverPhoto || "https://i.ibb.co/default-cover.jpg";
+    }
+
+    // ✅ Load posts from RTDB
+    const postsContainer = document.getElementById("postsContainer");
+    rtdb.ref("posts").orderByChild("uid").equalTo(uid).on("value", snap=>{
+      postsContainer.innerHTML = "";
+      snap.forEach(child=>{
+        const post = child.val();
+        const postDiv = document.createElement("div");
+        postDiv.className = "post";
+        postDiv.textContent = post.text;
+        postsContainer.appendChild(postDiv);
+      });
+    });
+  }
+});
+
+// ✅ Click triggers
+document.getElementById("coverPhoto").addEventListener("click", () => {
+  document.getElementById("coverInput").click();
+});
+document.getElementById("profilePhoto").addEventListener("click", () => {
+  document.getElementById("profileInput").click();
+});
+
+// ✅ Upload cover
+document.getElementById("coverInput").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if(file){
+    const url = await uploadToImgbb(file);
+    document.getElementById("coverImg").src = url;
+    const user = auth.currentUser;
+    if(user){
+      await firestore.collection("users").doc(user.uid).update({
+        coverPhoto: url
+      });
+    }
+  }
+});
+
+// ✅ Upload profile
+document.getElementById("profileInput").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if(file){
+    const url = await uploadToImgbb(file);
+    document.getElementById("profileImg").src = url;
+    const user = auth.currentUser;
+    if(user){
+      await firestore.collection("users").doc(user.uid).update({
+        profilePhoto: url
+      });
+    }
+  }
+});
+</script>
+</body>
+</html>

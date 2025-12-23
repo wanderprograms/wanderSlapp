@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ny">
+<head>
+  <meta charset="utf-8">
+  <title>Index</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #eef2f7;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      width: 100%;
+      max-width: 420px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; color: #0a2b4f }
+    form { display: flex; flex-direction: column; gap: 16px }
+    .row { display: flex; gap: 12px }
+    .row input, .row select { flex: 1 }
+    input, select {
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    button {
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      background: #0a2b4f;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .switch { color: #0a2b4f; text-align: center; cursor: pointer }
+  </style>
+
+  <!-- Firebase SDK scripts -->
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<div class="container">
+  <h2 id="formTitle">Login</h2>
+
+  <!-- Login Form -->
+  <form id="loginForm">
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button type="submit">Login</button>
+    <div class="switch" id="toRegister">Create new account</div>
+  </form>
+
+  <!-- Register Form -->
+  <form id="registerForm" style="display:none">
+    <div class="row">
+      <input type="text" id="firstName" placeholder="First Name">
+      <input type="text" id="lastName" placeholder="Last Name">
+    </div>
+    <input type="email" id="regEmail" placeholder="Email">
+    <div class="row">
+      <select id="gender">
+        <option value="">Gender</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+      </select>
+      <select id="country">
+        <option value="">Country</option>
+        <option value="Malawi">Malawi</option>
+        <option value="Zambia">Zambia</option>
+        <option value="Tanzania">Tanzania</option>
+        <option value="Others">Others</option>
+      </select>
+    </div>
+    <div class="row">
+      <input type="text" id="phone" placeholder="Phone Number">
+      <input type="password" id="regPassword" placeholder="Password">
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="terms">
+      <label for="terms">I agree to terms and conditions</label>
+    </div>
+    <button type="submit">Register</button>
+    <div class="switch" id="toLogin">Already have account? Login</div>
+  </form>
+</div>
+
+<script>
+  // ✅ Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyBBZxCwywnv_ZVXYezOV8IKG6iKWK5sL10",
+    authDomain: "studio-ywlo1.firebaseapp.com",
+    projectId: "studio-ywlo1",
+    storageBucket: "studio-ywlo1.appspot.com",
+    messagingSenderId: "791958850921",
+    appId: "1:791958850921:web:149be668e7f132e59f41f8"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const firestore = firebase.firestore();
+
+  // ✅ Switching logic
+  const loginForm = document.getElementById("loginForm");
+  const registerForm = document.getElementById("registerForm");
+  const formTitle = document.getElementById("formTitle");
+
+  document.getElementById("toRegister").addEventListener("click", () => {
+    loginForm.style.display = "none";
+    registerForm.style.display = "flex";
+    formTitle.textContent = "Create Account";
+  });
+
+  document.getElementById("toLogin").addEventListener("click", () => {
+    registerForm.style.display = "none";
+    loginForm.style.display = "flex";
+    formTitle.textContent = "Login";
+  });
+
+  // ✅ Login
+  loginForm.onsubmit = async e => {
+    e.preventDefault();
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+    if (!email || !password) {
+      alert("Lembani Email ndi Password.");
+      return;
+    }
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+      alert("Login successful!");
+      window.location.href = "dashboad.html";
+    } catch (err) {
+      alert("Login failed: " + err.message);
+    }
+  };
+
+  // ✅ Register
+  registerForm.onsubmit = async e => {
+    e.preventDefault();
+    const firstName = document.getElementById("firstName").value.trim();
+    const lastName = document.getElementById("lastName").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const gender = document.getElementById("gender").value;
+    const country = document.getElementById("country").value;
+    const phone = document.getElementById("phone").value.trim();
+    const password = document.getElementById("regPassword").value.trim();
+    const terms = document.getElementById("terms").checked;
+
+    if (!firstName || !lastName || !email || !gender || !country || !phone || !password || !terms) {
+      alert("Lembani zonse bwino ndipo chongani checkbox.");
+      return;
+    }
+
+    try {
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      const uid = cred.user.uid;
+
+      // Save user details to Firestore
+      await firestore.collection("users").doc(uid).set({
+        fullName: firstName + " " + lastName,
+        email,
+        phone,
+        gender,
+        country,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      alert("Account created successfully!");
+      window.location.href = "dashboad.html";
+    } catch (err) {
+      alert("Register failed: " + err.message);
+    }
+  };
+</script>
+</body>
+</html>

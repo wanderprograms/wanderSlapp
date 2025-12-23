@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="ny">
+<head>
+<meta charset="utf-8">
+<title>Dashboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+<link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+<link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-brands/css/uicons-brands.css">
+<style>
+:root{--bg:#0a142b;--text:#f6fbff;--border:#254a83;--ink:#0a2b4f}
+*{box-sizing:border-box}
+html,body{margin:0;color:#222;font-family:system-ui;background:#fff}
+header{background:var(--bg);border-bottom:1px solid var(--border)}
+.topbar{display:flex;justify-content:flex-end;gap:30px;padding:12px 20px}
+.topbar i{font-size:22px;color:var(--text);cursor:pointer}
+.iconbar{display:flex;justify-content:space-around;padding:12px 0;border-top:1px solid var(--border)}
+.iconbar i{font-size:22px;color:var(--text);cursor:pointer;position:relative}
+.badge{position:absolute;top:-5px;right:-12px;background:red;color:white;font-size:12px;border-radius:50%;padding:2px 6px;display:none}
+.layout{display:flex;gap:20px;padding:20px}
+.left{width:80px}
+.right{flex:1;display:flex;flex-direction:column;gap:20px}
+.avatar{width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid var(--border);cursor:pointer}
+.postbox{display:flex;align-items:center;gap:10px}
+textarea.compose{flex:1;background:#0b1730;border:1px solid var(--border);border-radius:12px;color:var(--text);padding:10px;cursor:pointer}
+textarea.compose[readonly]:hover{background:#132246}
+button{padding:8px;border-radius:8px;border:1px solid var(--border);background:#0b1730;color:var(--text);cursor:pointer}
+button i{font-size:20px}
+#postsContainer{display:flex;flex-direction:column;gap:12px}
+.post{background:#f6fbff;border:1px solid #e1e7f0;border-radius:10px;padding:12px;color:var(--ink)}
+.post-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.post-head .avatar-sm{width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #d9dee5}
+.post-author{font-weight:600}
+.post-time{font-size:12px;color:#667}
+.post-text{white-space:pre-wrap;word-wrap:break-word;margin-top:4px}
+.post-media{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.img-thumb{max-width:180px;max-height:140px;border-radius:6px}
+.vid-thumb{width:180px;height:120px;border-radius:6px;object-fit:cover}
+.actions{display:flex;gap:18px;margin-top:10px}
+.actions .action{display:inline-flex;align-items:center;gap:6px;color:var(--ink);cursor:pointer}
+.count{font-weight:bold}
+.share-panel{display:none;margin-top:8px;padding:10px;border:1px solid #e2e6ea;border-radius:8px;background:#fafbfc}
+.share-options{display:flex;gap:12px;flex-wrap:wrap}
+.share-option{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #d9dee5;border-radius:6px;padding:8px 10px;cursor:pointer}
+.overlay{position:fixed;inset:0;background:#0b1730;display:none;z-index:1000;color:#fff}
+.overlay-header{position:fixed;top:0;left:0;right:0;height:50px;display:flex;align-items:center;gap:10px;padding:0 12px;background:#0a142b;border-bottom:1px solid #1d2c52}
+.overlay-header .back{display:inline-flex;align-items:center;gap:6px;color:#fff;cursor:pointer}
+.overlay-title{font-weight:600}
+.overlay-content{position:absolute;top:50px;bottom:60px;left:0;right:0;overflow:auto;padding:12px}
+.overlay-item{background:#0d1c3c;border:1px solid #254a83;border-radius:8px;padding:10px;margin-bottom:10px}
+.overlay-item .meta{font-size:12px;color:#cfe3ff;margin-bottom:4px}
+.overlay-item img{max-width:160px;border-radius:6px;margin-top:6px}
+.overlay-item .reply-btn{margin-top:6px;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.overlay-input{position:fixed;left:0;right:0;bottom:0;height:60px;background:#0a142b;border-top:1px solid #1d2c52;display:flex;align-items:center;gap:8px;padding:8px 12px}
+.overlay-input textarea{flex:1;background:#0b1730;border:1px solid #254a83;border-radius:8px;color:#fff;padding:8px;resize:none}
+.overlay-input .icon{font-size:22px;color:#cfe3ff;cursor:pointer}
+.overlay-input .send{background:#254a83;color:#fff;border:1px solid #2e5bb6;border-radius:8px;padding:8px 12px;cursor:pointer}
+.group-panel{display:none;margin-top:8px;padding:10px;border:1px solid #e2e6ea;border-radius:8px;background:#fafbfc}
+.group-list{display:flex;flex-direction:column;gap:8px;max-height:200px;overflow:auto;margin-top:8px}
+.group-item{display:flex;align-items:center;gap:8px}
+.group-actions{display:flex;gap:10px;margin-top:10px}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <i class="fi fi-rr-search" onclick="location.href='seach.html'"></i>
+    <i class="fi fi-rr-menu-burger" onclick="location.href='menu.html'"></i>
+  </div>
+  <div class="iconbar">
+    <i class="fi fi-sr-home" onclick="location.href='dashboad.html'"></i>
+    <div style="position:relative">
+      <i class="fi fi-sr-users-alt" onclick="location.href='frend.html'"></i>
+      <span id="rquestBadge" class="badge"></span>
+    </div>
+    <div style="position:relative">
+      <i class="fi fi-sr-comment-alt-dots" onclick="location.href='massege.html'"></i>
+      <span id="msgBadge" class="badge"></span>
+    </div>
+    <div style="position:relative">
+      <i class="fi fi-rr-bell" onclick="location.href='notfication.html'"></i>
+      <span id="notifBadge" class="badge"></span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  
+    <img id="profilePic" class="avatar" onclick="location.href='profile.html'">
+  </div>
+  <div class="right">
+    <div class="postbox">
+      <textarea class="compose" id="postText" placeholder="Lembani post..." readonly onclick="location.href='post.html'"></textarea>
+      <button id="btnPost"><i class="fi fi-rr-edit"></i></button>
+    </div>
+    <div id="postsContainer"></div>
+  </div>
+</div>
+
+<div id="overlay" class="overlay">
+  <div class="overlay-header">
+    <div id="overlayBack" class="back"><i class="fi fi-rr-angle-left"></i><span>Back</span></div>
+    <div id="overlayTitle" class="overlay-title">Comments</div>
+  </div>
+  <div id="overlayContent" class="overlay-content"></div>
+  <div class="overlay-input">
+    <textarea id="overlayTextarea" placeholder="Lembani..."></textarea>
+    <i id="overlayPickImg" class="fi fi-rr-picture icon"></i>
+    <input id="overlayImgInput" type="file" accept="image/*" style="display:none">
+    <button id="overlaySend" class="send">Send</button>
+  </div>
+</div>
+
+<script type="module">
+const CONFIG = {
+  firebase: {
+    apiKey: "AIzaSyBBZxCwywnv_ZVXYezOV8IKG6iKWK5sL10",
+    authDomain: "studio-ywlo1.firebaseapp.com",
+    projectId: "studio-ywlo1",
+    storageBucket: "studio-ywlo1.appspot.com",
+    messagingSenderId: "791958850921",
+    appId: "1:791958850921:web:149be668e7f132e59f41f8"
+  },
+  imgbbAPI: "6cd76cd441b1c0779a48c166439c8ffe"
+};
+
+firebase.initializeApp(CONFIG.firebase);
+const auth = firebase.auth();
+const rtdb = firebase.database();
+const firestore = firebase.firestore();
+
+function linkify(text){
+  const safe = (text||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return safe.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/\n/g,"<br>");
+}
+
+function timeAgo(ts){
+  const d = Date.now() - (ts||0);
+  const s = Math.floor(d/1000);
+  if(s<60) return s+"s";
+  const m = Math.floor(s/60);
+  if(m<60) return m+"m";
+  const h = Math.floor(m/60);
+  if(h<24) return h+"h";
+  const days = Math.floor(h/24);
+  return days+"d";
+}
+
+async function uploadToImgbb(file){
+  const fd = new FormData();
+  fd.append("image", file);
+  const res = await fetch(`https://api.imgbb.com/1/upload?key=${CONFIG.imgbbAPI}`, { method:"POST", body:fd });
+  const data = await res.json();
+  return data?.data?.url || null;
+}
+
+function renderAllPosts(container){
+  rtdb.ref("posts").on("value", async snap=>{
+    container.innerHTML = "";
+    const list = [];
+    snap.forEach(c=>list.push({ key:c.key, val:c.val() }));
+    list.sort((a,b)=> (b.val.createdAt||0) - (a.val.createdAt||0));
+    for(const {key:postKey,val:post} of list){
+      let authorName = "User";
+      let authorPic = "";
+      if(post.uid){
+        const uDoc = await firestore.collection("users").doc(post.uid).get();
+        if(uDoc.exists){
+          const d = uDoc.data();
+          authorName = d.fullName || "User";
+          authorPic = d.profilePhoto || "";
+        }
+      }
+      const likeCount = post.likes ? Object.keys(post.likes).length : 0;
+      const commentCount = post.comments ? Object.keys(post.comments).length : 0;
+      const div = document.createElement("div");
+      div.className = "post";
+      div.innerHTML = `
+        <div class="post-head">
+          <img class="avatar-sm" src="${authorPic||'https://i.ibb.co/7z5nDqK/avatar.png'}" alt="">
+          <div>
+            <div class="post-author">${authorName}</div>
+            <div class="post-time">${timeAgo(post.createdAt||Date.now())}</div>
+          </div>
+        </div>
+        <div class="post-text">${linkify(post.text||"")}</div>
+        <div class="post-media">
+          ${Array.isArray(post.media)?post.media.map(m=> m.type==="image"
+            ? `<img class="img-thumb" src="${m.url}">`
+            : `<video class="vid-thumb" src="${m.url}" controls></video>`
+          ).join(""):""}
+        </div>
+        <div class="actions">
+          <div class="action" id="likeBtn-${postKey}"><i class="fi fi-rr-social-network"></i><span>Like</span>(<span class="count" id="likeCount-${postKey}">${likeCount}</span>)</div>
+          <div class="action" id="commentBtn-${postKey}"><i class="fi fi-rr-comment"></i><span>Comment</span>(<span class="count" id="commentCount-${postKey}">${commentCount}</span>)</div>
+          <div class="action" id="shareBtn-${postKey}"><i class="fi fi-rr-share"></i><span>Share</span></div>
+        </div>
+        <div class="share-panel" id="sharePanel-${postKey}">
+          <div style="margin-bottom:8px;font-weight:bold">SHARE POST TO</div>
+          <div class="share-options">
+            <div class="share-option" id="shareGroup-${postKey}"><i class="fi fi-sr-users-alt"></i><span>Group (site)</span></div>
+            <div class="share-option" id="shareWhats-${postKey}"><i class="fi fi-brands-whatsapp"></i><span>WhatsApp</span></div>
+            <div class="share-option" id="shareCopy-${postKey}"><i class="fi fi-rr-copy-alt"></i><span>Copy link</span></div>
+          </div>
+          <div class="group-panel" id="groupPanel-${postKey}">
+            <div>Select groups (max 5):</div>
+            <div class="group-list" id="groupList-${postKey}"></div>
+            <div class="group-actions">
+              <button id="groupShareSend-${postKey}">Share</button>
+              <button id="groupShareCancel-${postKey}">Cancel</button>
+            </div>
+          </div>
+        </div>
+      `;
+      container.appendChild(div);
+
+      document.getElementById(`likeBtn-${postKey}`).addEventListener("click", async ()=>{
+        const u = auth.currentUser;
+        if(!u) return;
+        const likeRef = rtdb.ref(`posts/${postKey}/likes/${u.uid}`);
+        const s = await likeRef.get();
+        if(s.exists()) await likeRef.remove(); else await likeRef.set(true);
+      });
+
+      rtdb.ref(`posts/${postKey}/likes`).on("value", s=>{
+        const cnt = s.exists() ? Object.keys(s.val()).length : 0;
+        const el = document.getElementById(`likeCount-${postKey}`);
+        if(el) el.textContent = cnt;
+      });
+
+      document.getElementById(`commentBtn-${postKey}`).addEventListener("click", ()=>{
+        openOverlay({ mode:"comment", postKey });
+      });
+
+      document.getElementById(`shareBtn-${postKey}`).addEventListener("click", ()=>{
+        const p = document.getElementById(`sharePanel-${postKey}`);
+        p.style.display = p.style.display==="none" || p.style.display==="" ? "block" : "none";
+      });
+
+      document.getElementById(`shareWhats-${postKey}`).addEventListener("click", ()=>{
+        const base = location.origin + location.pathname + `?post=${postKey}`;
+        const text = encodeURIComponent((post.text||"") + "\n" + base);
+        const url = `https://api.whatsapp.com/send?text=${text}`;
+        window.open(url, "_blank");
+      });
+
+      document.getElementById(`shareCopy-${postKey}`).addEventListener("click", async ()=>{
+        const link = location.origin + location.pathname + `?post=${postKey}`;
+        try{ await navigator.clipboard.writeText(link); alert("Link copied."); }
+        catch{
+          const ta = document.createElement("textarea");
+          ta.value = link; document.body.appendChild(ta); ta.select();
+          document.execCommand("copy"); document.body.removeChild(ta);
+          alert("Link copied.");
+        }
+      });
+
+      document.getElementById(`shareGroup-${postKey}`).addEventListener("click", async ()=>{
+        const panel = document.getElementById(`groupPanel-${postKey}`);
+        const listEl = document.getElementById(`groupList-${postKey}`);
+        panel.style.display = "block";
+        listEl.innerHTML = "";
+        const gsnap = await rtdb.ref("groups").get();
+        gsnap.forEach(g=>{
+          const gid = g.key;
+          const name = g.val()?.name || ("Group " + gid);
+          const row = document.createElement("label");
+          row.className = "group-item";
+          row.innerHTML = `<input type="checkbox" value="${gid}"><span>${name}</span>`;
+          listEl.appendChild(row);
+        });
+        const sendBtn = document.getElementById(`groupShareSend-${postKey}`);
+        const cancelBtn = document.getElementById(`groupShareCancel-${postKey}`);
+        sendBtn.onclick = async ()=>{
+          const checks = Array.from(listEl.querySelectorAll('input[type="checkbox"]:checked')).map(i=>i.value);
+          if(checks.length===0){ alert("Sankhani osachepera group limodzi."); return; }
+          if(checks.length>5){ alert("Musapitirire 5."); return; }
+          const u = auth.currentUser;
+          if(!u){ alert("Login kaye."); return; }
+          for(const gid of checks){
+            await rtdb.ref(`groups/${gid}/sharedPosts/${postKey}`).set({ fromUid: u.uid, at: Date.now() });
+          }
+          panel.style.display = "none";
+          document.getElementById(`sharePanel-${postKey}`).style.display = "none";
+          const referrer = document.referrer || "dashboard.html";
+          location.href = referrer;
+        };
+        cancelBtn.onclick = ()=>{ panel.style.display = "none"; };
+      });
+    }
+  });
+}
+
+let overlayState = { mode:"comment", postKey:null, commentKey:null };
+
+function openOverlay({mode, postKey, commentKey=null}){
+  overlayState = { mode, postKey, commentKey };
+  const overlay = document.getElementById("overlay");
+  const titleEl = document.getElementById("overlayTitle");
+  const contentEl = document.getElementById("overlayContent");
+  const inputTa = document.getElementById("overlayTextarea");
+  const imgPick = document.getElementById("overlayPickImg");
+  const imgInput = document.getElementById("overlayImgInput");
+  const sendBtn = document.getElementById("overlaySend");
+  overlay.style.display = "block";
+  titleEl.textContent = mode==="comment" ? "Comments" : "Replies";
+  contentEl.innerHTML = "";
+  inputTa.value = "";
+  imgInput.value = "";
+
+  if(mode==="comment"){
+    rtdb.ref(`posts/${postKey}/comments`).on("value", csnap=>{
+      contentEl.innerHTML = "";
+      const list = [];
+      csnap.forEach(cc=>list.push({ key:cc.key, val:cc.val() }));
+      list.sort((a,b)=> (a.val.createdAt||0) - (b.val.createdAt||0));
+      list.forEach(({key:cKey,val:c})=>{
+        const item = document.createElement("div");
+        item.className = "overlay-item";
+        item.innerHTML = `
+          <div class="meta">${c.authorName||"User"} • ${timeAgo(c.createdAt||Date.now())}</div>
+          <div>${linkify(c.text||"")}</div>
+          ${c.image?`<img src="${c.image}">`:""}
+          <div class="reply-btn" id="openReplies-${cKey}"><i class="fi fi-rr-comment"></i><span>View replies</span></div>
+        `;
+        contentEl.appendChild(item);
+        item.querySelector(`#openReplies-${cKey}`).addEventListener("click", ()=>{
+          openOverlay({ mode:"reply", postKey, commentKey:cKey });
+        });
+      });
+    });
+    imgPick.onclick = ()=> imgInput.click();
+    sendBtn.onclick = async ()=>{
+      const u = auth.currentUser;
+      if(!u) return;
+      const t = inputTa.value.trim();
+      const f = imgInput.files[0];
+      let imgUrl = null;
+      if(f) imgUrl = await uploadToImgbb(f);
+      const uDoc = await firestore.collection("users").doc(u.uid).get();
+      const name = uDoc.exists ? (uDoc.data().fullName||"User") : "User";
+      await rtdb.ref(`posts/${postKey}/comments`).push({
+        authorUid: u.uid,
+        authorName: name,
+        text: t,
+        image: imgUrl || null,
+        createdAt: Date.now()
+      });
+      inputTa.value = "";
+      imgInput.value = "";
+    };
+  } else {
+    rtdb.ref(`posts/${postKey}/comments/${commentKey}/replies`).on("value", rsnap=>{
+      contentEl.innerHTML = "";
+      const list = [];
+      rsnap.forEach(rr=>list.push({ key:rr.key, val:rr.val() }));
+      list.sort((a,b)=> (a.val.createdAt||0) - (b.val.createdAt||0));
+      list.forEach(({val:r})=>{
+        const item = document.createElement("div");
+        item.className = "overlay-item";
+        item.innerHTML = `
+          <div class="meta">${r.authorName||"User"} • ${timeAgo(r.createdAt||Date.now())}</div>
+          <div>${linkify(r.text||"")}</div>
+          ${r.image?`<img src="${r.image}">`:""}
+        `;
+        contentEl.appendChild(item);
+      });
+    });
+    imgPick.onclick = ()=> imgInput.click();
+    sendBtn.onclick = async ()=>{
+      const u = auth.currentUser;
+      if(!u) return;
+      const t = inputTa.value.trim();
+      const f = imgInput.files[0];
+      let imgUrl = null;
+      if(f) imgUrl = await uploadToImgbb(f);
+      const uDoc = await firestore.collection("users").doc(u.uid).get();
+      const name = uDoc.exists ? (uDoc.data().fullName||"User") : "User";
+      await rtdb.ref(`posts/${postKey}/comments/${commentKey}/replies`).push({
+        authorUid: u.uid,
+        authorName: name,
+        text: t,
+        image: imgUrl || null,
+        createdAt: Date.now()
+      });
+      inputTa.value = "";
+      imgInput.value = "";
+    };
+  }
+}
+
+document.getElementById("overlayBack").addEventListener("click", ()=>{
+  document.getElementById("overlay").style.display = "none";
+});
+
+auth.onAuthStateChanged(user=>{
+  if(!user) return;
+  rtdb.ref("users/"+user.uid+"/profilePic").on("value",snap=>{
+    const url=snap.val();
+    if(url) document.getElementById("profilePic").src=url;
+  });
+  rtdb.ref("notifications/"+user.uid).on("value",snap=>{
+    let count=0;
+    snap.forEach(child=>{ if(child.val().seen===false) count++; });
+    const badge=document.getElementById("notifBadge");
+    if(count>0){ badge.style.display="inline"; badge.textContent=count; }
+    else{ badge.style.display="none"; }
+  });
+  rtdb.ref("messages/"+user.uid).on("value",snap=>{
+    let count=0;
+    snap.forEach(child=>{ if(child.val().seen===false) count++; });
+    const badge=document.getElementById("msgBadge");
+    if(count>0){ badge.style.display="inline"; badge.textContent=count; }
+    else{ badge.style.display="none"; }
+  });
+  renderAllPosts(document.getElementById("postsContainer"));
+});
+
+document.getElementById("btnPost").onclick=()=>{ location.href='post.html'; };
+</script>
+</body>
+</html>
