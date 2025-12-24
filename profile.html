@@ -5,7 +5,7 @@
   <title>Profile</title>
   <style>
     body{font-family:sans-serif;background:#f4f6f9;margin:0;padding:0}
-    .profile-container{max-width:600px;margin:0 auto;padding:0}
+    .profile-container{max-width:700px;margin:0 auto;padding:0}
     .cover-photo{width:100%;height:180px;background:#ccc;position:relative;overflow:hidden;cursor:pointer}
     .cover-photo img{width:100%;height:100%;object-fit:cover}
     .back-btn{position:absolute;top:10px;left:0%;padding:8px 12px;background:#0a2b4f;color:#fff;border:none;border-radius:6px;cursor:pointer;z-index:2}
@@ -29,13 +29,13 @@
 <body>
 <div class="profile-container">
   <div class="cover-photo" id="coverPhoto">
-    <img id="coverImg" src="https://i.ibb.co/default-cover.jpg" alt="Cover">
-    <button class="back-btn" onclick="window.location.href='dashboad.html'">Back</button>
+    <img id="coverImg" src="https://i.ibb.co/default-cover.jpg" alt="Cover">   
     <div class="profile-photo" id="profilePhoto">
       <img id="profileImg" src="https://i.ibb.co/default.jpg" alt="Profile">
     </div>
   </div>
-
+ <button class="back-btn" onclick="window.location.href='dashboad.html'">Back</button>
+  
   <div class="profile-header">
     <div class="profile-name" id="userName"></div>
     <button class="edit-btn" onclick="window.location.href='edit.html'">Edit Profile</button>
