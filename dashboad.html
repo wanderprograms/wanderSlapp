@@ -2,7 +2,7 @@
 <html lang="ny">
 <head>
 <meta charset="utf-8">
-<title>Dashboard</title>
+<title>WanderSlapp</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
 <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
@@ -42,6 +42,10 @@ button i{font-size:20px}
 .share-panel{display:none;margin-top:8px;padding:10px;border:1px solid #e2e6ea;border-radius:8px;background:#fafbfc}
 .share-options{display:flex;gap:12px;flex-wrap:wrap}
 .share-option{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #d9dee5;border-radius:6px;padding:8px 10px;cursor:pointer}
+.group-panel{display:none;margin-top:8px;padding:10px;border:1px solid #e2e6ea;border-radius:8px;background:#fff}
+.group-list{display:flex;flex-direction:column;gap:8px;max-height:200px;overflow:auto;margin-top:8px}
+.group-item{display:flex;align-items:center;gap:8px}
+.group-actions{display:flex;gap:10px;margin-top:10px}
 .overlay{position:fixed;inset:0;background:#0b1730;display:none;z-index:1000;color:#fff}
 .overlay-header{position:fixed;top:0;left:0;right:0;height:50px;display:flex;align-items:center;gap:10px;padding:0 12px;background:#0a142b;border-bottom:1px solid #1d2c52}
 .overlay-header .back{display:inline-flex;align-items:center;gap:6px;color:#fff;cursor:pointer}
@@ -50,15 +54,10 @@ button i{font-size:20px}
 .overlay-item{background:#0d1c3c;border:1px solid #254a83;border-radius:8px;padding:10px;margin-bottom:10px}
 .overlay-item .meta{font-size:12px;color:#cfe3ff;margin-bottom:4px}
 .overlay-item img{max-width:160px;border-radius:6px;margin-top:6px}
-.overlay-item .reply-btn{margin-top:6px;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
 .overlay-input{position:fixed;left:0;right:0;bottom:0;height:60px;background:#0a142b;border-top:1px solid #1d2c52;display:flex;align-items:center;gap:8px;padding:8px 12px}
 .overlay-input textarea{flex:1;background:#0b1730;border:1px solid #254a83;border-radius:8px;color:#fff;padding:8px;resize:none}
 .overlay-input .icon{font-size:22px;color:#cfe3ff;cursor:pointer}
 .overlay-input .send{background:#254a83;color:#fff;border:1px solid #2e5bb6;border-radius:8px;padding:8px 12px;cursor:pointer}
-.group-panel{display:none;margin-top:8px;padding:10px;border:1px solid #e2e6ea;border-radius:8px;background:#fafbfc}
-.group-list{display:flex;flex-direction:column;gap:8px;max-height:200px;overflow:auto;margin-top:8px}
-.group-item{display:flex;align-items:center;gap:8px}
-.group-actions{display:flex;gap:10px;margin-top:10px}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
@@ -94,7 +93,7 @@ button i{font-size:20px}
   </div>
   <div class="right">
     <div class="postbox">
-      <textarea class="compose" id="postText" placeholder="Lembani post..." readonly onclick="location.href='post.html'"></textarea>
+      <textarea class="compose" id="postText" placeholder="Lembani post..." readonly onclick="location.href='post2.html'"></textarea>
       <button id="btnPost"><i class="fi fi-rr-edit"></i></button>
     </div>
     <div id="postsContainer"></div>
@@ -137,7 +136,6 @@ function linkify(text){
   const safe = (text||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   return safe.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/\n/g,"<br>");
 }
-
 function timeAgo(ts){
   const d = Date.now() - (ts||0);
   const s = Math.floor(d/1000);
@@ -149,7 +147,6 @@ function timeAgo(ts){
   const days = Math.floor(h/24);
   return days+"d";
 }
-
 async function uploadToImgbb(file){
   const fd = new FormData();
   fd.append("image", file);
@@ -161,10 +158,10 @@ async function uploadToImgbb(file){
 function renderAllPosts(container){
   rtdb.ref("posts").on("value", async snap=>{
     container.innerHTML = "";
-    const list = [];
-    snap.forEach(c=>list.push({ key:c.key, val:c.val() }));
-    list.sort((a,b)=> (b.val.createdAt||0) - (a.val.createdAt||0));
-    for(const {key:postKey,val:post} of list){
+    const posts = [];
+    snap.forEach(c=>posts.push({ key:c.key, val:c.val() }));
+    posts.sort((a,b)=> (b.val.createdAt||0) - (a.val.createdAt||0));
+    for(const {key:postKey,val:post} of posts){
       let authorName = "User";
       let authorPic = "";
       if(post.uid){
@@ -177,9 +174,16 @@ function renderAllPosts(container){
       }
       const likeCount = post.likes ? Object.keys(post.likes).length : 0;
       const commentCount = post.comments ? Object.keys(post.comments).length : 0;
-      const div = document.createElement("div");
-      div.className = "post";
-      div.innerHTML = `
+      const mediaHtml = Array.isArray(post.media)
+        ? post.media.map(m=> m.type==="image"
+            ? `<img class="img-thumb" src="${m.url}">`
+            : `<video class="vid-thumb" src="${m.url}" controls></video>`
+          ).join("")
+        : "";
+
+      const card = document.createElement("div");
+      card.className = "post";
+      card.innerHTML = `
         <div class="post-head">
           <img class="avatar-sm" src="${authorPic||'https://i.ibb.co/7z5nDqK/avatar.png'}" alt="">
           <div>
@@ -188,15 +192,10 @@ function renderAllPosts(container){
           </div>
         </div>
         <div class="post-text">${linkify(post.text||"")}</div>
-        <div class="post-media">
-          ${Array.isArray(post.media)?post.media.map(m=> m.type==="image"
-            ? `<img class="img-thumb" src="${m.url}">`
-            : `<video class="vid-thumb" src="${m.url}" controls></video>`
-          ).join(""):""}
-        </div>
+        <div class="post-media">${mediaHtml}</div>
         <div class="actions">
           <div class="action" id="likeBtn-${postKey}"><i class="fi fi-rr-social-network"></i><span>Like</span>(<span class="count" id="likeCount-${postKey}">${likeCount}</span>)</div>
-          <div class="action" id="commentBtn-${postKey}"><i class="fi fi-rr-comment"></i><span>Comment</span>(<span class="count" id="commentCount-${postKey}">${commentCount}</span>)</div>
+          <div class="action" id="commentBtn-${postKey}"><i class="fi fi-sr-comment-alt"></i><span>Comment</span>(<span class="count" id="commentCount-${postKey}">${commentCount}</span>)</div>
           <div class="action" id="shareBtn-${postKey}"><i class="fi fi-rr-share"></i><span>Share</span></div>
         </div>
         <div class="share-panel" id="sharePanel-${postKey}">
@@ -216,7 +215,7 @@ function renderAllPosts(container){
           </div>
         </div>
       `;
-      container.appendChild(div);
+      container.appendChild(card);
 
       document.getElementById(`likeBtn-${postKey}`).addEventListener("click", async ()=>{
         const u = auth.currentUser;
@@ -225,7 +224,6 @@ function renderAllPosts(container){
         const s = await likeRef.get();
         if(s.exists()) await likeRef.remove(); else await likeRef.set(true);
       });
-
       rtdb.ref(`posts/${postKey}/likes`).on("value", s=>{
         const cnt = s.exists() ? Object.keys(s.val()).length : 0;
         const el = document.getElementById(`likeCount-${postKey}`);
@@ -233,21 +231,19 @@ function renderAllPosts(container){
       });
 
       document.getElementById(`commentBtn-${postKey}`).addEventListener("click", ()=>{
-        openOverlay({ mode:"comment", postKey });
+        openComments(postKey);
       });
 
       document.getElementById(`shareBtn-${postKey}`).addEventListener("click", ()=>{
         const p = document.getElementById(`sharePanel-${postKey}`);
         p.style.display = p.style.display==="none" || p.style.display==="" ? "block" : "none";
       });
-
       document.getElementById(`shareWhats-${postKey}`).addEventListener("click", ()=>{
         const base = location.origin + location.pathname + `?post=${postKey}`;
         const text = encodeURIComponent((post.text||"") + "\n" + base);
         const url = `https://api.whatsapp.com/send?text=${text}`;
         window.open(url, "_blank");
       });
-
       document.getElementById(`shareCopy-${postKey}`).addEventListener("click", async ()=>{
         const link = location.origin + location.pathname + `?post=${postKey}`;
         try{ await navigator.clipboard.writeText(link); alert("Link copied."); }
@@ -258,7 +254,6 @@ function renderAllPosts(container){
           alert("Link copied.");
         }
       });
-
       document.getElementById(`shareGroup-${postKey}`).addEventListener("click", async ()=>{
         const panel = document.getElementById(`groupPanel-${postKey}`);
         const listEl = document.getElementById(`groupList-${postKey}`);
@@ -273,9 +268,7 @@ function renderAllPosts(container){
           row.innerHTML = `<input type="checkbox" value="${gid}"><span>${name}</span>`;
           listEl.appendChild(row);
         });
-        const sendBtn = document.getElementById(`groupShareSend-${postKey}`);
-        const cancelBtn = document.getElementById(`groupShareCancel-${postKey}`);
-        sendBtn.onclick = async ()=>{
+        document.getElementById(`groupShareSend-${postKey}`).onclick = async ()=>{
           const checks = Array.from(listEl.querySelectorAll('input[type="checkbox"]:checked')).map(i=>i.value);
           if(checks.length===0){ alert("Sankhani osachepera group limodzi."); return; }
           if(checks.length>5){ alert("Musapitirire 5."); return; }
@@ -289,112 +282,145 @@ function renderAllPosts(container){
           const referrer = document.referrer || "dashboard.html";
           location.href = referrer;
         };
-        cancelBtn.onclick = ()=>{ panel.style.display = "none"; };
+        document.getElementById(`groupShareCancel-${postKey}`).onclick = ()=>{
+          panel.style.display = "none";
+        };
       });
     }
   });
 }
 
-let overlayState = { mode:"comment", postKey:null, commentKey:null };
+let overlayMode = "comment";
+let currentPostKey = null;
+let currentCommentKey = null;
+let commentsRef = null;
 
-function openOverlay({mode, postKey, commentKey=null}){
-  overlayState = { mode, postKey, commentKey };
+function openComments(postKey){
+  overlayMode = "comment";
+  currentPostKey = postKey;
+  currentCommentKey = null;
   const overlay = document.getElementById("overlay");
   const titleEl = document.getElementById("overlayTitle");
   const contentEl = document.getElementById("overlayContent");
-  const inputTa = document.getElementById("overlayTextarea");
-  const imgPick = document.getElementById("overlayPickImg");
-  const imgInput = document.getElementById("overlayImgInput");
-  const sendBtn = document.getElementById("overlaySend");
+  const ta = document.getElementById("overlayTextarea");
+  const pick = document.getElementById("overlayPickImg");
+  const inp = document.getElementById("overlayImgInput");
+  const send = document.getElementById("overlaySend");
   overlay.style.display = "block";
-  titleEl.textContent = mode==="comment" ? "Comments" : "Replies";
+  titleEl.textContent = "Comments";
   contentEl.innerHTML = "";
-  inputTa.value = "";
-  imgInput.value = "";
+  ta.value = "";
+  inp.value = "";
+  if(commentsRef) commentsRef.off();
+  commentsRef = rtdb.ref(`posts/${postKey}/comments`);
+  commentsRef.on("value", csnap=>{
+    contentEl.innerHTML = "";
+    const list = [];
+    csnap.forEach(cc=>list.push({ key:cc.key, val:cc.val() }));
+    list.sort((a,b)=> (a.val.createdAt||0) - (b.val.createdAt||0));
+    for(const {key:cKey,val:c} of list){
+      const item = document.createElement("div");
+      item.className = "overlay-item";
+      item.innerHTML = `
+        <div class="meta">${c.authorName||"User"} • ${timeAgo(c.createdAt||Date.now())}</div>
+        <div>${linkify(c.text||"")}</div>
+        ${c.image?`<img src="${c.image}">`:""}
+        <div class="reply-btn" id="replyOpen-${cKey}"><i class="fi fi-rr-reply"></i><span>Reply</span></div>
+      `;
+      contentEl.appendChild(item);
+      item.querySelector(`#replyOpen-${cKey}`).addEventListener("click", ()=>{
+        openReplies(postKey, cKey);
+      });
+    }
+    const cntEl = document.getElementById(`commentCount-${postKey}`);
+    if(cntEl) cntEl.textContent = list.length;
+  });
+  pick.onclick = ()=> inp.click();
+  send.onclick = async ()=>{
+    const u = auth.currentUser;
+    if(!u) return;
+    const text = ta.value.trim();
+    const f = inp.files[0];
+    let imgUrl = null;
+    if(f) imgUrl = await uploadToImgbb(f);
+    const uDoc = await firestore.collection("users").doc(u.uid).get();
+    const name = uDoc.exists ? (uDoc.data().fullName||"User") : "User";
+    await rtdb.ref(`posts/${postKey}/comments`).push({
+      authorUid: u.uid,
+      authorName: name,
+      text,
+      image: imgUrl || null,
+      createdAt: Date.now()
+    });
+    ta.value = "";
+    inp.value = "";
+  };
+}
 
-  if(mode==="comment"){
-    rtdb.ref(`posts/${postKey}/comments`).on("value", csnap=>{
-      contentEl.innerHTML = "";
-      const list = [];
-      csnap.forEach(cc=>list.push({ key:cc.key, val:cc.val() }));
-      list.sort((a,b)=> (a.val.createdAt||0) - (b.val.createdAt||0));
-      list.forEach(({key:cKey,val:c})=>{
-        const item = document.createElement("div");
-        item.className = "overlay-item";
-        item.innerHTML = `
-          <div class="meta">${c.authorName||"User"} • ${timeAgo(c.createdAt||Date.now())}</div>
-          <div>${linkify(c.text||"")}</div>
-          ${c.image?`<img src="${c.image}">`:""}
-          <div class="reply-btn" id="openReplies-${cKey}"><i class="fi fi-rr-comment"></i><span>View replies</span></div>
-        `;
-        contentEl.appendChild(item);
-        item.querySelector(`#openReplies-${cKey}`).addEventListener("click", ()=>{
-          openOverlay({ mode:"reply", postKey, commentKey:cKey });
-        });
-      });
+function openReplies(postKey, commentKey){
+  overlayMode = "reply";
+  currentPostKey = postKey;
+  currentCommentKey = commentKey;
+  const overlay = document.getElementById("overlay");
+  const titleEl = document.getElementById("overlayTitle");
+  const contentEl = document.getElementById("overlayContent");
+  const ta = document.getElementById("overlayTextarea");
+  const pick = document.getElementById("overlayPickImg");
+  const inp = document.getElementById("overlayImgInput");
+  const send = document.getElementById("overlaySend");
+  overlay.style.display = "block";
+  titleEl.textContent = "Replies";
+  contentEl.innerHTML = "";
+  ta.value = "";
+  inp.value = "";
+  if(commentsRef) commentsRef.off();
+  commentsRef = rtdb.ref(`posts/${postKey}/comments/${commentKey}/replies`);
+  commentsRef.on("value", rsnap=>{
+    contentEl.innerHTML = "";
+    const list = [];
+    rsnap.forEach(rr=>list.push({ key:rr.key, val:rr.val() }));
+    list.sort((a,b)=> (a.val.createdAt||0) - (b.val.createdAt||0));
+    for(const {val:r} of list){
+      const item = document.createElement("div");
+      item.className = "overlay-item";
+      item.innerHTML = `
+        <div class="meta">${r.authorName||"User"} • ${timeAgo(r.createdAt||Date.now())}</div>
+        <div>${linkify(r.text||"")}</div>
+        ${r.image?`<img src="${r.image}">`:""}
+      `;
+      contentEl.appendChild(item);
+    }
+  });
+  pick.onclick = ()=> inp.click();
+  send.onclick = async ()=>{
+    const u = auth.currentUser;
+    if(!u) return;
+    const text = ta.value.trim();
+    const f = inp.files[0];
+    let imgUrl = null;
+    if(f) imgUrl = await uploadToImgbb(f);
+    const uDoc = await firestore.collection("users").doc(u.uid).get();
+    const name = uDoc.exists ? (uDoc.data().fullName||"User") : "User";
+    await rtdb.ref(`posts/${postKey}/comments/${commentKey}/replies`).push({
+      authorUid: u.uid,
+      authorName: name,
+      text,
+      image: imgUrl || null,
+      createdAt: Date.now()
     });
-    imgPick.onclick = ()=> imgInput.click();
-    sendBtn.onclick = async ()=>{
-      const u = auth.currentUser;
-      if(!u) return;
-      const t = inputTa.value.trim();
-      const f = imgInput.files[0];
-      let imgUrl = null;
-      if(f) imgUrl = await uploadToImgbb(f);
-      const uDoc = await firestore.collection("users").doc(u.uid).get();
-      const name = uDoc.exists ? (uDoc.data().fullName||"User") : "User";
-      await rtdb.ref(`posts/${postKey}/comments`).push({
-        authorUid: u.uid,
-        authorName: name,
-        text: t,
-        image: imgUrl || null,
-        createdAt: Date.now()
-      });
-      inputTa.value = "";
-      imgInput.value = "";
-    };
-  } else {
-    rtdb.ref(`posts/${postKey}/comments/${commentKey}/replies`).on("value", rsnap=>{
-      contentEl.innerHTML = "";
-      const list = [];
-      rsnap.forEach(rr=>list.push({ key:rr.key, val:rr.val() }));
-      list.sort((a,b)=> (a.val.createdAt||0) - (b.val.createdAt||0));
-      list.forEach(({val:r})=>{
-        const item = document.createElement("div");
-        item.className = "overlay-item";
-        item.innerHTML = `
-          <div class="meta">${r.authorName||"User"} • ${timeAgo(r.createdAt||Date.now())}</div>
-          <div>${linkify(r.text||"")}</div>
-          ${r.image?`<img src="${r.image}">`:""}
-        `;
-        contentEl.appendChild(item);
-      });
-    });
-    imgPick.onclick = ()=> imgInput.click();
-    sendBtn.onclick = async ()=>{
-      const u = auth.currentUser;
-      if(!u) return;
-      const t = inputTa.value.trim();
-      const f = imgInput.files[0];
-      let imgUrl = null;
-      if(f) imgUrl = await uploadToImgbb(f);
-      const uDoc = await firestore.collection("users").doc(u.uid).get();
-      const name = uDoc.exists ? (uDoc.data().fullName||"User") : "User";
-      await rtdb.ref(`posts/${postKey}/comments/${commentKey}/replies`).push({
-        authorUid: u.uid,
-        authorName: name,
-        text: t,
-        image: imgUrl || null,
-        createdAt: Date.now()
-      });
-      inputTa.value = "";
-      imgInput.value = "";
-    };
-  }
+    ta.value = "";
+    inp.value = "";
+  };
 }
 
 document.getElementById("overlayBack").addEventListener("click", ()=>{
-  document.getElementById("overlay").style.display = "none";
+  if(overlayMode==="reply"){
+    openComments(currentPostKey);
+  }else{
+    document.getElementById("overlay").style.display = "none";
+    const referrer = document.referrer || "dashboad.html";
+    location.href = referrer;
+  }
 });
 
 auth.onAuthStateChanged(user=>{

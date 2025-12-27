@@ -2,7 +2,7 @@
 <html lang="ny">
 <head>
   <meta charset="utf-8">
-  <title>Profile</title>
+  <title>WanderSlapp</title>
   <style>
     body{font-family:sans-serif;background:#f4f6f9;margin:0;padding:0}
     .profile-container{max-width:700px;margin:0 auto;padding:0}
@@ -29,13 +29,13 @@
 <body>
 <div class="profile-container">
   <div class="cover-photo" id="coverPhoto">
-    <img id="coverImg" src="https://i.ibb.co/default-cover.jpg" alt="Cover">   
+    <img id="coverImg" src="images/avatar.png" alt="Cover">
+   
     <div class="profile-photo" id="profilePhoto">
-      <img id="profileImg" src="https://i.ibb.co/default.jpg" alt="Profile">
+      <img id="profileImg" src="images/people.png" alt="Profile">
     </div>
   </div>
  <button class="back-btn" onclick="window.location.href='dashboad.html'">Back</button>
-  
   <div class="profile-header">
     <div class="profile-name" id="userName"></div>
     <button class="edit-btn" onclick="window.location.href='edit.html'">Edit Profile</button>
@@ -94,8 +94,8 @@ auth.onAuthStateChanged(async user=>{
     if(doc.exists){
       const data = doc.data();
       document.getElementById("userName").textContent = data.fullName || "Anonymous";
-      document.getElementById("profileImg").src = data.profilePhoto || "https://i.ibb.co/default.jpg";
-      document.getElementById("coverImg").src = data.coverPhoto || "https://i.ibb.co/default-cover.jpg";
+      document.getElementById("profileImg").src = data.profilePhoto || "images/people.png";
+      document.getElementById("coverImg").src = data.coverPhoto || "images/avatar.png";
     }
 
     // ✅ Load posts from RTDB

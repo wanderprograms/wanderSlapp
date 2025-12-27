@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+  <meta charset="utf-8">
+  <title>WanderSlapp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: sans-serif; background:#f9f9f9; margin:0; padding:0; text-align:center; }
+    header { background:#111; color:#fff; padding:14px; font-weight:bold; }
+    h2 { margin-top:20px; }
+    .buttons { display:flex; justify-content:center; gap:30px; flex-wrap:wrap; margin:20px 0; }
+    .btn {
+      padding:16px 20px; border-radius:10px; font-weight:bold;
+      text-decoration:none; color:#fff; cursor:pointer;
+      min-width:160px; text-align:center;
+      box-shadow:0 2px 6px rgba(0,0,0,0.15);
+    }
+    .airtelQR { background:#e7092f; }
+    .tnmQR { background:#2a9d8f; }
+    .airtelLogo, .tnmLogo {
+      background:#fff; color:#000;
+      display:flex; flex-direction:column; align-items:center;
+      justify-content:center; padding:12px; border-radius:10px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.1);
+      cursor:pointer;
+    }
+    .airtelLogo img, .tnmLogo img { width:80px; height:auto; margin-bottom:8px; }
+    .section { display:none; padding:20px; text-align:center; position:relative; }
+    .qr { width:300px; height:300px; margin:20px auto; display:block; }
+    .back {
+      position:absolute; top:5px; left:10px;
+      padding:8px 12px; background:#555; color:#fff;
+      border-radius:6px; text-decoration:none;
+    }
+    .donateBtn {
+      display:inline-block; padding:12px 18px; border-radius:8px;
+      font-weight:bold; text-decoration:none; margin-top:20px;
+      color:#fff;
+    }
+    .airtel { background:#e7092f; }
+    .mpamba { background:#2a9d8f; }
+    .copyBox { display:flex; justify-content:center; gap:10px; margin:15px 0; }
+    .copyBox input {
+      padding:10px; font-size:16px; width:180px;
+      border:1px solid #ccc; border-radius:6px;
+    }
+    .copyBtn {
+      padding:10px 14px; background:#111; color:#fff;
+      border-radius:6px; cursor:pointer;
+    }
+    .back-btn{position:absolute;top:20px;left:0%;padding:8px 12px;background:#e7092f;color:#fff;border:none;border-radius:6px;cursor:pointer;z-index:2}
+  </style>
+</head>
+<body>
+  <button class="back-btn" onclick="window.location.href='menu.html'"><mark>Back</button>
+
+  <header>Mwachifundo Ndikukoma Mtima Kwanu<br> Mungathandize Mwakufuna Kwanu Kuti Tikulitse Program Ino,<br> Chifukwa Pamafunika Zambiri Kuti Program Ngati Iyi Itheke.</header>
+
+  <!-- HOME VIEW yokha imasonyeza ma uthenga -->
+  <div id="home">
+    <!-- Uthenga woyamba -->
+    <h2>Pelekani mosavuta pongopanga SCAN ma QR code awa</h2>
+    <!-- Ma button awiri a QR code -->
+    <div class="buttons">
+      <button class="btn airtelQR" onclick="showSection('airtelQR')">AIRTEL QR CODE</button>
+      <button class="btn tnmQR" onclick="showSection('tnmQR')">TNM QR CODE</button>
+    </div>
+
+    <!-- Uthenga wachiwiri -->
+    <h2>Kapena gwiritsani ntchito manual pa USSD</h2>
+    <!-- Ma button awiri a USSD -->
+    <div class="buttons">
+      <div class="airtelLogo" onclick="showSection('airtelSection')">
+        <img src="images/airtel.jpg" alt="Airtel Logo">
+        Airtel Money
+      </div>
+      <div class="tnmLogo" onclick="showSection('tnmSection')">
+        <img src="images/tnm.jpg" alt="TNM Logo">
+        TNM Mpamba
+      </div>
+    </div>
+  </div>
+
+  <!-- Airtel QR Section -->
+  <div class="section" id="airtelQR">
+    <a href="#" class="back" onclick="goHome()">← Back</a>
+    <h2>Airtel QR Code</h2>
+    <img src="images/wanderslapQRcode.png" alt="Airtel QR Code" class="qr">
+  </div>
+
+  <!-- TNM QR Section -->
+  <div class="section" id="tnmQR">
+    <a href="#" class="back" onclick="goHome()">← Back</a>
+    <h2>TNM QR Code</h2>
+    <img src="images/Wanderslapp.png" alt="TNM QR Code" class="qr">
+  </div>
+
+  <!-- Airtel Section -->
+  <div class="section" id="airtelSection">
+    <a href="#" class="back" onclick="goHome()">← Back</a>
+    <h2>Airtel Money</h2>
+    <div class="copyBox">
+      <input type="text" id="airtelNum" value="0990914737" readonly>
+      <button class="copyBtn" onclick="copyNumber('airtelNum')">Copy</button>
+    </div>
+    <p>Donate via USSD: *211#<br>izawonetsa dzina<br><big>Isaac Wonderford</mark></p>
+    <a href="tel:*211#" class="donateBtn airtel">Donate Now</a>
+  </div>
+
+  <!-- TNM Section -->
+  <div class="section" id="tnmSection">
+    <a href="#" class="back" onclick="goHome()">← Back</a>
+    <h2>TNM Mpamba</h2>
+    <div class="copyBox">
+      <input type="text" id="tnmNum" value="0899535951" readonly>
+      <button class="copyBtn" onclick="copyNumber('tnmNum')">Copy</button>
+    </div>
+    <p>Donate via USSD: *444#<br>izawonetsa dzina<br><big>Isaac Wonderford</mark></p>
+    <a href="tel:*444#" class="donateBtn mpamba">Donate Now</a>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.getElementById('home').style.display = 'none';
+      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
+    }
+    function goHome() {
+      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      document.getElementById('home').style.display = 'block';
+    }
+    function copyNumber(id) {
+      const input = document.getElementById(id);
+      input.select();
+      input.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(input.value);
+      alert("copyd to keyboat: " + input.value);
+    }
+  </script>
+</body>
+</html>

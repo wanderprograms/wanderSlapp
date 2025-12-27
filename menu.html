@@ -2,55 +2,118 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Logout Page</title>
+  <title>WanderSlapp</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #ff7e5f, #feb47b);
+      background: linear-gradient(135deg, #43cea2, #185a9d);
       margin: 0;
       height: 100vh;
       display: flex;
-      justify-content: center;   /* center horizontally */
-      align-items: flex-end;     /* move to bottom */
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    .logout-btn {
+    .center-section {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center; /* center vertically */
+      align-items: flex-start; /* align ku left */
+      gap: 30px;
+      width: 80%; /* kuti ma button asamakhale pakati pa screen */
+    }
+
+    .grid-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 150px); /* awiri awiri pa line */
+      gap: 20px;
+    }
+
+    .btn {
       display: flex;
       align-items: center;
-      gap: 10px; /* space between icon and text */
+      justify-content: flex-start;
+      gap: 8px;
       background-color: #fff;
-      color: #ff7e5f;
-      border: 2px solid #ff7e5f;
-      padding: 12px 24px;
-      font-size: 18px;
+      color: #185a9d;
+      border: 2px solid #185a9d;
+      padding: 12px;
+      font-size: 15px;
       font-weight: bold;
-      border-radius: 8px;
+      border-radius: 10px;
       cursor: pointer;
-      transition: all 0.3s ease;
       text-decoration: none;
-      margin-bottom: 40px; /* space from bottom */
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
     }
 
-    .logout-btn:hover {
-      background-color: #ff7e5f;
+    .btn:hover {
+      background-color: #185a9d;
       color: #fff;
       transform: scale(1.05);
     }
 
-    .logout-btn img {
+    .btn img {
       width: 22px;
       height: 22px;
     }
-    .back-btn{position:absolute;top:10px;left:10px;padding:8px 12px;background:#0a2b4f;color:#fff;border:none;border-radius:6px;cursor:pointer;z-index:2}
+
+    .setting-div {
+      display: flex;
+      justify-content: flex-start;
+      width: 150px; /* kuti ikhale yokha ku left */
+    }
+
+    .bottom-button {
+      margin-bottom: 40px;
+    }
+    .back-btn{position:absolute;top:10px;left:0%;padding:8px 12px;background:#0a2b4f;color:#fff;border:none;border-radius:6px;cursor:pointer;z-index:2}
   </style>
 </head>
 <body>
   <button class="back-btn" onclick="window.location.href='dashboad.html'">Back</button>
+  <!-- Center section yokhala ndi ma tiles -->
+  <div class="center-section">
+    <div class="grid-buttons">
+      <a href="page.html" class="btn">
+        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828859.png" alt="page icon">
+        PAGE
+      </a>
+      <a href="group.html" class="btn">
+        <img src="https://cdn-icons-png.flaticon.com/512/1828/1828850.png" alt="group icon">
+        GROUP
+      </a>
+      <a href="market.html" class="btn">
+        <img src="https://cdn-icons-png.flaticon.com/512/1170/1170678.png" alt="market icon">
+        MARKET
+      </a>
+      <a href="comunity.html" class="btn">
+        <img src="https://cdn-icons-png.flaticon.com/512/1077/1077114.png" alt="gift icon">
+        COMMUNITY GIFT
+      </a>
+    </div>
 
-  <!-- Button yokhala ndi icon ya Flaticon -->
-  <a href="index.html" class="logout-btn">
-    <img src="https://cdn-icons-png.flaticon.com/512/1828/1828490.png" alt="logout icon">
-    Logout
-  </a>
+    <!-- Setting button yokha mu div yake -->
+    <div class="setting-div">
+      <a href="settings.html" class="btn">
+        <img src="https://cdn-icons-png.flaticon.com/512/3524/3524659.png" alt="settings icon">
+        SETTING
+      </a>  
+    </div>
+
+    <div class="donated">
+      <a href="donated.html" class="btn">DONATE</a>
+    </div>
+  </div>
+
+  <!-- Logout button yokha pansi pakati -->
+  <div class="bottom-button">
+    <a href="index.html" class="btn">
+      <img src="https://cdn-icons-png.flaticon.com/512/1828/1828490.png" alt="logout icon">
+      LOGOUT
+    </a>
+  </div>
 </body>
 </html>

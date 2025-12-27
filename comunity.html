@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta http-equiv="CONTENT-TYPE" content="text/html; charset=UTF-8">
+  <title>WanderSlapp</title>
+  <style>
+  	  body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #43cea2, #185a9d);
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .h1 {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center; /* center vertically */
+      align-items: flex-start; /* align ku left */
+      gap: 30px;
+      width: 80%; /* kuti ma button asamakhale pakati pa screen */
+    }
+
+    .back-btn{position:absolute;top:10px;left:0%;padding:8px 12px;background:#0a2b4f;color:#fff;border:none;border-radius:6px;cursor:pointer;z-index:2}
+  </style>
+</head>
+<body>
+  <button class="back-btn" onclick="window.location.href='menu.html'">Back</button>
+
+  <h1>
+    Hello, World!
+  </h1>
+</body>
+</html>

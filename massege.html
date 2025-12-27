@@ -1,23 +1,327 @@
 <!DOCTYPE html>
-
-<html>
+<html lang="en">
 <head>
-  <meta http-equiv="CONTENT-TYPE" content="text/html; charset=UTF-8">
-  <title>Hello, World!</title>
+  <meta charset="UTF-8" />
+  <title>WanderSlapp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-     body{font-family:sans-serif;background:#f4f6f9;margin:0;padding:0}
-  	.back-btn{position:absolute;top:10px;left:10px;padding:8px 12px;background:#0a2b4f;color:#fff;border:none;border-radius:6px;cursor:pointer;z-index:2}
-  	 .h1{width:120px;height:120px;border-radius:50%;border:4px solid #fff;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#eee;overflow:hidden;cursor:pointer;z-index:1}
-    .h1-txt{width:100%;height:100%;object-fit:cover}
-    /* ✅ User name left, edit button right */
-    h1{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;margin-top:10px}
+    :root{
+      --bg:#f7f7f7; --white:#fff; --border:#ddd; --muted:#777; --accent:#1a73e8;
+      --sent:#dcf8c6; --recv:#f1f1f1;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial; background:var(--bg)}
+
+    /* Top bar */
+    .topbar{
+      height:52px; background:var(--white); border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between; padding:0 12px;
+    }
+    .title{font-weight:600}
+    .badge-wrap{display:flex; align-items:center; gap:10px}
+    #msgBadge{
+      min-width:22px; height:22px; border-radius:11px; background:var(--accent); color:#fff; display:inline-flex;
+      align-items:center; justify-content:center; font-size:12px; padding:0 6px;
+    }
+
+    /* Single screen sections (toggle) */
+    .section{display:none; min-height:calc(100vh - 52px)}
+    .active{display:flex; flex-direction:column}
+
+    /* Friends section */
+    #friendsSection .header{padding:12px; font-weight:600}
+    .friends-list{flex:1; overflow:auto}
+    .friend{
+      display:flex; align-items:center; gap:12px; padding:12px; background:#fff; border-bottom:1px solid #eee; cursor:pointer;
+    }
+    .friend img{width:48px; height:48px; border-radius:50%; object-fit:cover}
+    .friend .name{font-weight:500}
+    .friend .muted{color:var(--muted); font-size:12px}
+
+    /* Chat section */
+    .chat-header{
+      display:flex; align-items:center; gap:10px; padding:12px; background:#fff; border-bottom:1px solid var(--border)
+    }
+    .backBtn{cursor:pointer; font-size:20px; margin-right:2px}
+    .chat-header img{width:40px; height:40px; border-radius:50%; object-fit:cover}
+    .chat-header .who{font-weight:600}
+    .chat-header .meta{color:var(--muted); font-size:12px}
+    .chat-messages{flex:1; overflow:auto; padding:12px; background:#fff; display:flex; flex-direction:column; gap:8px}
+    .message{max-width:75%; padding:8px 10px; border-radius:10px; font-size:15px}
+    .sent{background:var(--sent); align-self:flex-end}
+    .received{background:var(--recv); align-self:flex-start}
+    .message .time{display:block; color:var(--muted); font-size:11px; margin-top:4px}
+    .message img{max-width:240px; border-radius:8px}
+    .message video{max-width:280px; border-radius:8px}
+    .chat-input{
+      border-top:1px solid var(--border); background:#fff; padding:10px; display:flex; align-items:flex-end; gap:8px
+    }
+    #fileBtn{padding:8px 10px; border:1px solid var(--border); background:#fff; border-radius:8px; cursor:pointer}
+    #messageInput{flex:1; min-height:44px; max-height:140px; resize:vertical; padding:8px 10px; border:1px solid var(--border); border-radius:8px}
+    #sendBtn{padding:10px 14px; border:none; background:var(--accent); color:#fff; border-radius:8px; cursor:pointer}
+     .back-btn{position:absolute;top:10px;left:0%;padding:8px 12px;background:#0a2b4f;color:#fff;border:none;border-radius:6px;cursor:pointer;z-index:2}
   </style>
 </head>
 <body>
-  <h1>
-    Hello, World!
-  </h1>
    <button class="back-btn" onclick="window.location.href='dashboad.html'">Back</button>
+  
+  <div class="topbar">
+    <div class="title">Massege</div>
+    <div class="badge-wrap">
+      <span id="msgBadge"></span>
+    </div>
+  </div>
+
+  <!-- Single screen: toggle sections -->
+  <main id="friendsSection" class="section active">
+    <div class="header">Anzako</div>
+    <div id="friendsList" class="friends-list"></div>
+  </main>
+
+  <main id="chatSection" class="section">
+    <div class="chat-header">
+      <span class="backBtn" id="backBtn">⬅</span>
+      <img id="chatUserPhoto" alt="Profile" />
+      <div>
+        <div id="chatUserName" class="who"></div>
+        <div id="chatUserMeta" class="meta"></div>
+      </div>
+    </div>
+    <div id="chatMessages" class="chat-messages"></div>
+    <div class="chat-input">
+      <button id="fileBtn">📎</button>
+      <textarea id="messageInput" placeholder="Lembani uthenga..."></textarea>
+      <button id="sendBtn">Tumiza</button>
+    </div>
+  </main>
+
+  <!-- Firebase SDK v10.5.0 compat -->
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+
+  <script>
+     // ✅ Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyBBZxCwywnv_ZVXYezOV8IKG6iKWK5sL10",
+    authDomain: "studio-ywlo1.firebaseapp.com",
+    projectId: "studio-ywlo1",
+    storageBucket: "studio-ywlo1.appspot.com",
+    messagingSenderId: "791958850921",
+    appId: "1:791958850921:web:149be668e7f132e59f41f8"
+  };
+    firebase.initializeApp(firebaseConfig);
+
+    // API keys near config
+    const IMGBB_KEY = "YOUR_IMGBB_KEY";
+    const PIXELS_KEY = "YOUR_PIXELS_KEY";
+    const PIXELS_UPLOAD_URL = `https://api.pixels.com/1/upload?key=${PIXELS_KEY}`; // adjust if your provider differs
+
+    // Firebase handles
+    const auth = firebase.auth();          // user already logged-in (handled elsewhere)
+    const firestore = firebase.firestore();// friends from Firestore frend collection
+    const rtdb = firebase.database();      // messages in RTDB
+
+    // Elements
+    const friendsSection = document.getElementById("friendsSection");
+    const chatSection = document.getElementById("chatSection");
+    const friendsList = document.getElementById("friendsList");
+    const backBtn = document.getElementById("backBtn");
+
+    const chatMessages = document.getElementById("chatMessages");
+    const chatUserPhoto = document.getElementById("chatUserPhoto");
+    const chatUserName = document.getElementById("chatUserName");
+    const chatUserMeta = document.getElementById("chatUserMeta");
+    const sendBtn = document.getElementById("sendBtn");
+    const fileBtn = document.getElementById("fileBtn");
+    const messageInput = document.getElementById("messageInput");
+    const msgBadge = document.getElementById("msgBadge");
+
+    // State
+    let myUserId = null;
+    let currentFriend = null;
+    let currentMessagesRef = null;
+
+    // Assume user already logged in: read UID and go
+    auth.onAuthStateChanged(user => {
+      if(user){
+        myUserId = user.uid;
+        loadFriendsFromFirestore();
+        listenUnreadBadge();
+      }else{
+        // If no user, do nothing (login handled elsewhere)
+      }
+    });
+
+    // Friends: Firestore frend/{myUserId}/list
+    function loadFriendsFromFirestore(){
+      firestore.collection("frend").doc(myUserId).collection("list")
+        .onSnapshot((snap) => {
+          friendsList.innerHTML = "";
+          snap.forEach(doc => {
+            const fr = doc.data(); // expect {id, name, photo}
+            const item = document.createElement("div");
+            item.className = "friend";
+            item.innerHTML = `
+              <img src="${fr.photo || "https://i.pravatar.cc/80?u="+fr.id}" alt="">
+              <div>
+                <div class="name">${fr.name || "User"}</div>
+                <div class="muted">${fr.id}</div>
+              </div>
+            `;
+            item.onclick = () => openChat(fr);
+            friendsList.appendChild(item);
+          });
+        });
+    }
+
+    // Toggle sections on same screen
+    function showFriends(){
+      chatSection.classList.remove("active");
+      friendsSection.classList.add("active");
+      // detach message listener when leaving chat
+      if(currentMessagesRef){ currentMessagesRef.off(); currentMessagesRef = null; }
+    }
+    backBtn.onclick = showFriends;
+
+    // Messages path: messages/{receiverId}/{senderId}/(message)
+    function openChat(friend){
+      currentFriend = friend;
+      friendsSection.classList.remove("active");
+      chatSection.classList.add("active");
+      chatUserPhoto.src = friend.photo || "https://i.pravatar.cc/80?u="+friend.id;
+      chatUserName.textContent = friend.name || "User";
+      chatUserMeta.textContent = friend.id;
+      chatMessages.innerHTML = "";
+
+      if(currentMessagesRef){ currentMessagesRef.off(); }
+
+      // Mark existing unread in my inbox with this friend as seen
+      const myInboxWithFriend = rtdb.ref(`messages/${myUserId}/${friend.id}`);
+      myInboxWithFriend.once("value", snap => {
+        snap.forEach(ch => {
+          const v = ch.val();
+          if(!v.seen && v.sender !== myUserId){
+            ch.ref.update({ seen:true });
+          }
+        });
+      });
+
+      // Listen my inbox with friend
+      currentMessagesRef = rtdb.ref(`messages/${myUserId}/${friend.id}`);
+      currentMessagesRef.on("child_added", snap => {
+        const msg = snap.val();
+        const bubble = document.createElement("div");
+        bubble.className = (msg.sender === myUserId) ? "message sent" : "message received";
+
+        if(msg.type === "image"){
+          bubble.innerHTML = `<img src="${msg.text}" alt="image"><span class="time">${formatTime(msg.timestamp)}</span>`;
+        }else if(msg.type === "video"){
+          bubble.innerHTML = `<video controls src="${msg.text}"></video><span class="time">${formatTime(msg.timestamp)}</span>`;
+        }else{
+          bubble.innerHTML = `${escapeHtml(msg.text)}<span class="time">${formatTime(msg.timestamp)}</span>`;
+        }
+        chatMessages.appendChild(bubble);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // Auto-mark incoming as seen while open
+        if(msg.sender !== myUserId && !msg.seen){
+          snap.ref.update({ seen:true });
+        }
+      });
+    }
+
+    // Send text
+    sendBtn.onclick = async () => {
+      if(!currentFriend || !myUserId) return;
+      const text = messageInput.value.trim();
+      if(!text) return;
+
+      const now = Date.now();
+      const payload = { sender: myUserId, text, type:"text", seen:false, timestamp: now };
+
+      // Push to friend's inbox (their unread)
+      await rtdb.ref(`messages/${currentFriend.id}/${myUserId}`).push(payload);
+      // Push to my copy (seen true for me)
+      await rtdb.ref(`messages/${myUserId}/${currentFriend.id}`).push({ ...payload, seen:true });
+
+      messageInput.value = "";
+    };
+
+    // Upload image/video: store only the link in RTDB
+    fileBtn.onclick = () => {
+      if(!currentFriend || !myUserId) return;
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*,video/*";
+      input.onchange = async (e) => {
+        const file = e.target.files?.[0];
+        if(!file) return;
+
+        try{
+          const now = Date.now();
+          if(file.type.startsWith("image/")){
+            // Upload to imgbb
+            const formData = new FormData();
+            formData.append("image", file);
+            const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, {
+              method: "POST",
+              body: formData
+            });
+            const data = await res.json();
+            const url = data?.data?.url;
+            if(!url) throw new Error("imgbb upload failed");
+
+            const payload = { sender: myUserId, text:url, type:"image", seen:false, timestamp: now };
+            await rtdb.ref(`messages/${currentFriend.id}/${myUserId}`).push(payload);
+            await rtdb.ref(`messages/${myUserId}/${currentFriend.id}`).push({ ...payload, seen:true });
+
+          }else{
+            // Upload to Pixels (await fetch with FormData)
+            const formData = new FormData();
+            formData.append("video", file);
+            const res = await fetch(PIXELS_UPLOAD_URL, { method:"POST", body: formData });
+            const data = await res.json();
+            const url = data?.data?.url || data?.url;
+            if(!url) throw new Error("Pixels upload failed");
+
+            const payload = { sender: myUserId, text:url, type:"video", seen:false, timestamp: now };
+            await rtdb.ref(`messages/${currentFriend.id}/${myUserId}`).push(payload);
+            await rtdb.ref(`messages/${myUserId}/${currentFriend.id}`).push({ ...payload, seen:true });
+          }
+        }catch(err){
+          alert(err.message || "File upload failed.");
+        }
+      };
+      input.click();
+    };
+
+    // Unread badge: count unseen in my root inbox
+    function listenUnreadBadge(){
+      const myRoot = rtdb.ref(`messages/${myUserId}`);
+      myRoot.on("value", snap => {
+        let unread = 0;
+        snap.forEach(friendSnap => {
+          friendSnap.forEach(msgSnap => {
+            const v = msgSnap.val();
+            if(!v.seen && v.sender !== myUserId){ unread++; }
+          });
+        });
+        msgBadge.textContent = unread > 0 ? String(unread) : "";
+      });
+    }
+
+    // Helpers
+    function escapeHtml(s){
+      return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function formatTime(ts){
+      const d = new Date(ts || Date.now());
+      const hh = String(d.getHours()).padStart(2,"0");
+      const mm = String(d.getMinutes()).padStart(2,"0");
+      return `${hh}:${mm}`;
+    }
+  </script>
 </body>
 </html>
-s
