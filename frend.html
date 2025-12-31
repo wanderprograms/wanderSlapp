@@ -11,14 +11,12 @@
     body { font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:20px; }
     .user-card { display:flex; align-items:center; justify-content:space-between; background:#fff; padding:10px; margin-bottom:10px; border-radius:8px; }
     .user-info { display:flex; align-items:center; }
-    .user-info img { width:40px; height:40px; border-radius:50%; margin-right:10px; object-fit:cover; }
+    .user-info img { width:40px; height:40px; border-radius:50%; margin-right:10px; }
     button { background:#007bff; color:#fff; border:none; padding:6px 12px; border-radius:5px; cursor:pointer; }
     button:hover { background:#0056b3; }
-    button[disabled] { background:#cbd5e1; color:#0f172a; cursor:default; }
     h2 { margin-top:20px; }
     .section { margin-bottom:30px; }
     .empty { color:#777; font-style:italic; }
-    .actions { display:flex; gap:8px; }
   </style>
 </head>
 <body>
@@ -55,210 +53,111 @@
     firebase.auth().onAuthStateChanged(user => {
       if (user) {
         currentUserId = user.uid;
-        loadRequests();         // incoming requests (Confirm + Delete)
-        markRequestsSeen();     // mark pending to me as seen so dashboard badge can drop
-        loadSuggestions();      // people you may know (Add Friend / Pending / Friend)
+        console.log("Logged in as:", currentUserId);
+        loadRequests();
+        loadSuggestions();
       }
     });
 
-    // 🔹 Mark pending requests to me as seen (for dashboard badge logic)
-    async function markRequestsSeen() {
-      const snap = await db.collection("friendRequests")
-        .where("to", "==", currentUserId)
-        .where("status", "==", "pending")
-        .get();
-      const batch = db.batch();
-      snap.forEach(doc => {
-        batch.update(doc.ref, { seen: true, seenAt: Date.now() });
-      });
-      if (!snap.empty) await batch.commit();
-    }
-
-    // 🔹 Load Friend Requests (to == me), render profilePhoto + fullName, Confirm + Delete
+    // 🔹 Load Friend Requests
     function loadRequests() {
       db.collection("friendRequests")
         .where("to", "==", currentUserId)
-        .orderBy("timestamp", "desc")
         .onSnapshot(snapshot => {
           const container = document.getElementById("friendRequests");
           container.innerHTML = "";
-          // Show only pending (actionable)
-          const pendingDocs = snapshot.docs.filter(d => (d.data().status || "pending") === "pending");
-
-          if (pendingDocs.length === 0) {
+          if (snapshot.empty) {
             container.innerHTML = `<p class="empty">no frend add you</p>`;
-            return;
-          }
+          } else {
+            snapshot.forEach(doc => {
+              const req = doc.data();
+              db.collection("users").doc(req.from).get().then(userDoc => {
+                const user = userDoc.data();
+                const div = document.createElement("div");
+                div.className = "user-card";
 
-          pendingDocs.forEach(doc => {
-            const req = doc.data();
-            db.collection("users").doc(req.from).get().then(userDoc => {
-              const user = userDoc.data() || {};
-              const div = document.createElement("div");
-              div.className = "user-card";
-              div.id = "req_" + doc.id;
-
-              const photo = user.profilePhoto || 'https://via.placeholder.com/40';
-              const name = user.fullName || 'Unknown';
-
-              div.innerHTML = `
-                <div class="user-info">
-                  <img src="${photo}" alt="profile">
-                  <span>${name}</span>
-                </div>
-                <div class="actions">
-                  <button onclick="confirmRequest('${doc.id}', '${req.from}')">Confirm</button>
-                  <button class="btn-delete" onclick="deleteRequest('${doc.id}')">Delete</button>
-                </div>
-              `;
-              container.appendChild(div);
+                if (req.status === "pending") {
+                  div.innerHTML = `
+                    <div class="user-info">
+                      <img src="${user.profilePhoto || 'https://via.placeholder.com/40'}" alt="profile">
+                      <span>${user.fullName}</span>
+                    </div>
+                    <button onclick="confirmRequest('${doc.id}', '${req.from}')">Confirm</button>
+                  `;
+                } else if (req.status === "confirmed") {
+                  div.innerHTML = `
+                    <div class="user-info">
+                      <img src="${user.profilePhoto || 'https://via.placeholder.com/40'}" alt="profile">
+                      <span>${user.fullName}</span>
+                    </div>
+                    <button onclick="goToMessage('${user.uid}')">Message</button>
+                  `;
+                }
+                container.appendChild(div);
+              });
             });
-          });
+          }
         });
     }
 
-    // 🔹 Confirm Friend Request → status: confirmed + create friendship + remove request card
-    async function confirmRequest(requestId, fromUserId) {
-      try {
-        await db.collection("friendRequests").doc(requestId).update({ status: "confirmed" });
+    // 🔹 Confirm Friend Request
+    function confirmRequest(requestId, fromUserId) {
+      db.collection("friendRequests").doc(requestId).update({ status: "confirmed" });
 
-        // Write friendship (avoid duplicates)
-        await ensureFriendship(currentUserId, fromUserId);
+      // Add to friends collection
+      db.collection("friends").add({
+        user1: currentUserId,
+        user2: fromUserId,
+        timestamp: Date.now()
+      });
 
-        // Remove request card from UI
-        const el = document.getElementById("req_" + requestId);
-        if (el) el.remove();
-
-        // Optionally notify sender
-        await db.collection("notifications").add({
-          to: fromUserId,
-          message: "Your friend request has been accepted!",
-          timestamp: Date.now()
-        });
-
-        // Refresh suggestions so states reflect Friend
-        loadSuggestions();
-      } catch (e) {
-        alert("Failed to confirm: " + e.message);
-      }
+      // Notification
+      db.collection("notifications").add({
+        to: fromUserId,
+        message: "Your friend request has been accepted!",
+        timestamp: Date.now()
+      });
     }
 
-    // 🔹 Delete Friend Request → remove document + UI card
-    async function deleteRequest(requestId) {
-      try {
-        await db.collection("friendRequests").doc(requestId).delete();
-        const el = document.getElementById("req_" + requestId);
-        if (el) el.remove();
-
-        // Refresh suggestions so sender can see Add Friend again next time
-        loadSuggestions();
-      } catch (e) {
-        alert("Failed to delete: " + e.message);
-      }
-    }
-
-    // 🔹 Ensure friendship document exists (one per pair, any order)
-    async function ensureFriendship(a, b) {
-      const q1 = await db.collection("friends").where("user1", "==", a).where("user2", "==", b).get();
-      const q2 = await db.collection("friends").where("user1", "==", b).where("user2", "==", a).get();
-      if (!q1.empty || !q2.empty) return;
-      await db.collection("friends").add({ user1: a, user2: b, timestamp: Date.now() });
-    }
-
-    // 🔹 People You May Know (all users except me) with correct button states
+    // 🔹 Suggested Users (People You May Know)
     function loadSuggestions() {
-      db.collection("users").get().then(async snapshot => {
+      db.collection("users").get().then(snapshot => {
         const container = document.getElementById("suggestedUsers");
         container.innerHTML = "";
         if (snapshot.empty) {
           container.innerHTML = `<p class="empty">no users found</p>`;
-          return;
-        }
-
-        // Build suggestions
-        for (const doc of snapshot.docs) {
-          const user = doc.data() || {};
-          const uid = user.uid || doc.id;
-          if (uid === currentUserId) continue;
-
-          const photo = user.profilePhoto || 'https://via.placeholder.com/40';
-          const name = user.fullName || 'Unknown';
-
-          // Determine state: Friend / Pending / Add Friend
-          const isFriend = await isFriendWith(uid);
-          if (isFriend) {
-            const card = document.createElement("div");
-            card.className = "user-card";
-            card.innerHTML = `
-              <div class="user-info">
-                <img src="${photo}" alt="profile">
-                <span>${name}</span>
-              </div>
-              <button disabled>Friend</button>
-            `;
-            container.appendChild(card);
-            continue;
-          }
-
-          const hasOutgoingPending = await hasPendingRequest(currentUserId, uid);
-          const hasIncomingPending = await hasPendingRequest(uid, currentUserId);
-
-          let buttonHtml = "";
-          if (hasOutgoingPending || hasIncomingPending) {
-            buttonHtml = `<button disabled>Pending</button>`;
-          } else {
-            buttonHtml = `<button onclick="sendRequest('${uid}', this)">Add Friend</button>`;
-          }
-
-          const card = document.createElement("div");
-          card.className = "user-card";
-          card.innerHTML = `
-            <div class="user-info">
-              <img src="${photo}" alt="profile">
-              <span>${name}</span>
-            </div>
-            ${buttonHtml}
-          `;
-          container.appendChild(card);
+        } else {
+          snapshot.forEach(doc => {
+            const user = doc.data();
+            if (user.uid !== currentUserId) {
+              const div = document.createElement("div");
+              div.className = "user-card";
+              div.innerHTML = `
+                <div class="user-info">
+                  <img src="${user.profilePhoto || 'https://via.placeholder.com/40'}" alt="profile">
+                  <span>${user.fullName}</span>
+                </div>
+                <button onclick="sendRequest('${user.uid}')">Add Friend</button>
+              `;
+              container.appendChild(div);
+            }
+          });
         }
       });
     }
 
-    // ✅ Helpers to check state
-    async function isFriendWith(otherUid) {
-      const a = await db.collection("friends").where("user1", "==", currentUserId).where("user2", "==", otherUid).get();
-      if (!a.empty) return true;
-      const b = await db.collection("friends").where("user1", "==", otherUid).where("user2", "==", currentUserId).get();
-      return !b.empty;
+    // 🔹 Send Friend Request
+    function sendRequest(toUserId) {
+      db.collection("friendRequests").add({
+        from: currentUserId,
+        to: toUserId,
+        status: "pending",
+        timestamp: Date.now()
+      });
+      alert("Friend request sent!");
     }
 
-    async function hasPendingRequest(fromUid, toUid) {
-      const q = await db.collection("friendRequests")
-        .where("from", "==", fromUid)
-        .where("to", "==", toUid)
-        .where("status", "==", "pending")
-        .get();
-      return !q.empty;
-    }
-
-    // 🔹 Send Friend Request → button becomes Pending immediately
-    async function sendRequest(toUserId, btn) {
-      try {
-        await db.collection("friendRequests").add({
-          from: currentUserId,
-          to: toUserId,
-          status: "pending",
-          timestamp: Date.now(),
-          seen: false // receiver hasn’t opened frend.html yet
-        });
-        btn.textContent = "Pending";
-        btn.disabled = true;
-      } catch (e) {
-        alert("Friend request failed: " + e.message);
-      }
-    }
-
-    // Optional: expose goToMessage if you later show Message buttons on friends list
+    // 🔹 Redirect to Message Page
     function goToMessage(userId) {
       window.location.href = "massege.html?chatWith=" + userId;
     }
