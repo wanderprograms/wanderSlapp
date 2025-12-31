@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Frend.html</title>
+  <!-- Firebase v10.5.0 compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:20px; }
+    .user-card { display:flex; align-items:center; justify-content:space-between; background:#fff; padding:10px; margin-bottom:10px; border-radius:8px; }
+    .user-info { display:flex; align-items:center; }
+    .user-info img { width:40px; height:40px; border-radius:50%; margin-right:10px; }
+    button { background:#007bff; color:#fff; border:none; padding:6px 12px; border-radius:5px; cursor:pointer; }
+    button:hover { background:#0056b3; }
+    h2 { margin-top:20px; }
+    .section { margin-bottom:30px; }
+    .empty { color:#777; font-style:italic; }
+  </style>
+</head>
+<body>
+  <h1>Friends</h1>
+
+  <!-- 🔹 Section 1: Friend Requests -->
+  <div class="section">
+    <h2>Friend Requests</h2>
+    <div id="friendRequests"></div>
+  </div>
+
+  <!-- 🔹 Section 2: People You May Know -->
+  <div class="section">
+    <h2>People You May Know</h2>
+    <div id="suggestedUsers"></div>
+  </div>
+
+  <script>
+    // ✅ Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBBZxCwywnv_ZVXYezOV8IKG6iKWK5sL10",
+      authDomain: "studio-ywlo1.firebaseapp.com",
+      projectId: "studio-ywlo1",
+      storageBucket: "studio-ywlo1.appspot.com",
+      messagingSenderId: "791958850921",
+      appId: "1:791958850921:web:149be668e7f132e59f41f8"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let currentUserId = null;
+
+    // 🔹 Wait for Auth
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        currentUserId = user.uid;
+        console.log("Logged in as:", currentUserId);
+        loadRequests();
+        loadSuggestions();
+      }
+    });
+
+    // 🔹 Load Friend Requests
+    function loadRequests() {
+      db.collection("friendRequests")
+        .where("to", "==", currentUserId)
+        .onSnapshot(snapshot => {
+          const container = document.getElementById("friendRequests");
+          container.innerHTML = "";
+          if (snapshot.empty) {
+            container.innerHTML = `<p class="empty">no frend add you</p>`;
+          } else {
+            snapshot.forEach(doc => {
+              const req = doc.data();
+              db.collection("users").doc(req.from).get().then(userDoc => {
+                const user = userDoc.data();
+                const div = document.createElement("div");
+                div.className = "user-card";
+
+                if (req.status === "pending") {
+                  div.innerHTML = `
+                    <div class="user-info">
+                      <img src="${user.profilePhoto || 'https://via.placeholder.com/40'}" alt="profile">
+                      <span>${user.fullName}</span>
+                    </div>
+                    <button onclick="confirmRequest('${doc.id}', '${req.from}')">Confirm</button>
+                  `;
+                } else if (req.status === "confirmed") {
+                  div.innerHTML = `
+                    <div class="user-info">
+                      <img src="${user.profilePhoto || 'https://via.placeholder.com/40'}" alt="profile">
+                      <span>${user.fullName}</span>
+                    </div>
+                    <button onclick="goToMessage('${user.uid}')">Message</button>
+                  `;
+                }
+                container.appendChild(div);
+              });
+            });
+          }
+        });
+    }
+
+    // 🔹 Confirm Friend Request
+    function confirmRequest(requestId, fromUserId) {
+      db.collection("friendRequests").doc(requestId).update({ status: "confirmed" });
+
+      // Add to friends collection
+      db.collection("friends").add({
+        user1: currentUserId,
+        user2: fromUserId,
+        timestamp: Date.now()
+      });
+
+      // Notification
+      db.collection("notifications").add({
+        to: fromUserId,
+        message: "Your friend request has been accepted!",
+        timestamp: Date.now()
+      });
+    }
+
+    // 🔹 Suggested Users (People You May Know)
+    function loadSuggestions() {
+      db.collection("users").get().then(snapshot => {
+        const container = document.getElementById("suggestedUsers");
+        container.innerHTML = "";
+        if (snapshot.empty) {
+          container.innerHTML = `<p class="empty">no users found</p>`;
+        } else {
+          snapshot.forEach(doc => {
+            const user = doc.data();
+            if (user.uid !== currentUserId) {
+              const div = document.createElement("div");
+              div.className = "user-card";
+              div.innerHTML = `
+                <div class="user-info">
+                  <img src="${user.profilePhoto || 'https://via.placeholder.com/40'}" alt="profile">
+                  <span>${user.fullName}</span>
+                </div>
+                <button onclick="sendRequest('${user.uid}')">Add Friend</button>
+              `;
+              container.appendChild(div);
+            }
+          });
+        }
+      });
+    }
+
+    // 🔹 Send Friend Request
+    function sendRequest(toUserId) {
+      db.collection("friendRequests").add({
+        from: currentUserId,
+        to: toUserId,
+        status: "pending",
+        timestamp: Date.now()
+      });
+      alert("Friend request sent!");
+    }
+
+    // 🔹 Redirect to Message Page
+    function goToMessage(userId) {
+      window.location.href = "massege.html?chatWith=" + userId;
+    }
+  </script>
+</body>
+</html>
